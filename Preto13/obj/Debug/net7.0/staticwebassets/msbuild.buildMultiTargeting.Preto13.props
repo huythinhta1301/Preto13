@@ -1,0 +1,3 @@
+﻿<Project>
+  <Import Project="..\build\Preto13.props" />
+</Project>
