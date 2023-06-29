@@ -1,6 +1,6 @@
-﻿using Preto13.Model.Response;
+﻿using Preto13.Model;
 
-namespace Preto13.Data.iRepo.Common
+namespace Preto13.Data.Common
 {
     public interface iStatus
     {

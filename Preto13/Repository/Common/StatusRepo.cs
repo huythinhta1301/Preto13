@@ -2,13 +2,13 @@
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json.Linq;
 using Preto13.Config;
-using Preto13.Data.iRepo.Common;
-using Preto13.Model.Response;
+using Preto13.Data.Common;
+using Preto13.Model;
 using Preto13.Utils;
 using System.Data;
 using System.Reflection.Metadata;
 
-namespace Preto13.Data.Repository.Common
+namespace Preto13.Repository.Common
 {
     public class StatusRepo : iStatus
     {
@@ -29,7 +29,7 @@ namespace Preto13.Data.Repository.Common
             param.Add("@STATUS_DESCRIPTION", DESCRIPTION);
             try
             {
-               var resp = await _handleData.handleSp(query, param);
+                var resp = await _handleData.handleSp(query, param);
                 JObject firstObject = resp[0] as JObject;
                 if (firstObject.ContainsKey("RESULTCODE"))
                 {
@@ -68,7 +68,7 @@ namespace Preto13.Data.Repository.Common
 
                 if (dataRP.Count > 0)
                 {
-                    result.data.Add( dataRP);
+                    result.data = dataRP;
                     result.message = "SUCESS";
                     result.code = "1";
                     result.status = true;

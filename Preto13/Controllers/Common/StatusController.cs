@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Preto13.Data.iRepo.Common;
-using Preto13.Data.Repository.Common;
-using Preto13.Model.Response;
+using Preto13.Data.Common;
+using Preto13.Repository.Common;
+using Preto13.Model;
 
 namespace Preto13.Controllers.Common
 {
