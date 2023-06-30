@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json.Linq;
 using Preto13.Data.Member;
 using Preto13.Model;
 using Preto13.Model.DTO;
@@ -7,6 +8,7 @@ using Preto13.Utils;
 using System.Drawing;
 using System.Net;
 using System.Reflection.Metadata.Ecma335;
+using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 
 namespace Preto13.Controllers.Member
@@ -20,6 +22,7 @@ namespace Preto13.Controllers.Member
         {
             _account = account;
         }
+        
         [HttpPost("REGISTER")]
         public async Task<ActionResult<GenericResponse>> REGISTER_USER (USER_REGISTER_DTO regis)
         {
@@ -45,13 +48,28 @@ namespace Preto13.Controllers.Member
             return resp;
         }
 
-        //public async Task<ActionResult<GenericResponse>> LOGIN (USER_LOGIN_DTO login)
-        //{
-        //    GenericResponse resp = new GenericResponse();
-        //    try
-        //    {
-        //        resp = await _account.REGISTER(regis.username, regis.email, regis.phone, regis.password);
-        //    }
-        //}
+        [HttpPost("LOGIN")]
+        public async Task<ActionResult<LoginResponse>> LOGIN(USER_LOGIN_DTO loginDTO)
+        {
+            LoginResponse resp = new LoginResponse();
+            try
+            {
+                resp = await _account.LOGIN(loginDTO);
+                if (resp.code.Equals("0"))
+                {
+                    return Ok(resp);
+                }
+                else
+                {
+                    return BadRequest(resp);
+                }
+            }
+            catch(Exception ex)
+            {
+                resp.message = ex.Message;
+                Response.StatusCode = 500;
+            }
+            return resp;
+        }
     }
 }
