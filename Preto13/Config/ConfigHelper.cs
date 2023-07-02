@@ -14,7 +14,7 @@
 
         public static string GetAppSetting(string key)
         {
-            return configuration.GetSection("AppSettings")[key];
+            return configuration.GetSection("SecureStore")[key];
         }
     }
 }

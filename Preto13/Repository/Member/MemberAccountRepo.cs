@@ -15,9 +15,9 @@ namespace Preto13.Repository.Member
             _handleData = handle;
         }
 
-        public async Task<bool> CHECK_USER_EXIST(string INPUT)
+        public async Task<JObject> CHECK_USER_EXIST_LOGIN(string INPUT)
         {
-            string query = "UP_MB_CHECK_EXIST";
+            string query = "UP_MB_CHECK_EXIST_LOGIN";
             DataHelper helper = new DataHelper();
             var param = new Dictionary<string, object>();
             int loginType = 1; //default username
@@ -30,27 +30,21 @@ namespace Preto13.Repository.Member
                 loginType = 3; //phone
             }
             param.Add("@LoginValue", INPUT);
+            param.Add("@LOGIN_TYPE", loginType);
             var data = await _handleData.handleSp(query, param);
             JObject obj = JObject.Parse(data[0].ToString());
-            if (obj.ContainsKey("CODE"))
-            {
-                if (obj.GetValue("CODE").ToString().Equals("0"))
-                {
-                   return true;
-                }
-            }
-            return false;
+            return obj;
         }
 
         public async Task<GenericResponse> GET_USER_INFO_BY_ID(string memberID)
         {
-            string query = "UP_MB_LOGIN";
+            string query = "UP_MB_INFO";
             GenericResponse result = new GenericResponse();
             DataHelper helper = new DataHelper();
             var param = new Dictionary<string, object>();
             param.Add("@MEMBER_ID", memberID);
             var data = await _handleData.handleSp(query, param);
-            if(data.Count> 0)
+            if (data.Count > 0)
             {
                 result.status = true;
                 result.data = data;
@@ -65,74 +59,68 @@ namespace Preto13.Repository.Member
 
         public async Task<LoginResponse> LOGIN(USER_LOGIN_DTO loginDto)
         {
-            string query = "UP_MB_LOGIN";
+            //string query = "UP_MB_LOGIN";
             LoginResponse result = new LoginResponse();
             DataHelper helper = new DataHelper();
             var param = new Dictionary<string, object>();
 
-            Boolean check = await CHECK_USER_EXIST(loginDto.LoginIdentify);
-            if(check)
+            JObject jo = await CHECK_USER_EXIST_LOGIN(loginDto.LoginIdentify);
+            if (jo.GetValue("CODE").ToString() == "0")
             {
-                param.Add("@LoginValue", loginDto.LoginIdentify);
-
-            }
-            
-            helper.encryptPassword(loginDto.Password, out byte[] pwdHash, out byte[] pwdSalt);
-            string hash = helper.pwdByteToString(pwdHash);
-            string salt = helper.pwdByteToString(pwdSalt);
-            param.Add("@PWD_HASH", hash);
-            param.Add("@PWD_SALT", salt);
-            //param.Add("@LOGIN_TYPE", loginType);
-            try
-            {
-                var data = await _handleData.handleSp(query, param);
-                result.status = true;
-                JObject obj = JObject.Parse(data[0].ToString());
-                if (data.Count > 0)
+                string PWD_HASH = jo.GetValue("PWD_HASH").ToString();
+                string PWD_SALT = jo.GetValue("PWD_SALT").ToString();
+                Boolean checkPassword = helper.CompareHashedPassword(loginDto.Password, PWD_HASH, PWD_SALT);
+                if (checkPassword) // correct password
                 {
-                    if (obj.ContainsKey("CODE"))
+                    string memberID = jo.GetValue("MEMBER_ID").ToString();
+                    param.Add("@LoginValue", loginDto.LoginIdentify);
+                    try
                     {
-                        string resultCode = obj.GetValue("CODE").ToString();
-                        result.code = resultCode;
-                        switch (resultCode)
+                        GenericResponse dataUser = await GET_USER_INFO_BY_ID(memberID);
+                        if (dataUser.data != null && dataUser.data.Count > 0)
                         {
-                            
-                            case "0": //LOGIN SUCCESS
-                                string memberID = obj.GetValue("MEMBER_ID").ToString();
-                                GenericResponse dataUser = await GET_USER_INFO_BY_ID(memberID);
-                                JObject jwtData = JObject.Parse(dataUser.data.ToString());
-                                string token = helper.CreateJWT(jwtData);
-                                result.token = token;
-                                result.message = "LOGIN SUCCESS !";
-                                break;
-                            case "2": //WRONG PASSWORD
-                                result.message = "PLEASE CHECK YOUR PASSWORD AGAIN !";
-                                break;
-                            case "-1": //MEMBER NOT EXIST
-                                result.message = "LOGIN IDENTIFY IS NOT EXIST";
-                                break;
-                            default:
-                                result.message = "LOGIN FAIL! PLEASE TRY AGAIN";
-                                break;
+                            JObject jwtData = JObject.Parse(dataUser.data[0].ToString());
+                            // Use jwtData as needed
+                            string token = helper.CreateJWT(jwtData);
+                            result.code = "0";
+                            result.token = token;
+                            result.message = "LOGIN SUCCESS !";
                         }
+                        
+                        //    break;
+                        //case "2": //WRONG PASSWORD
+                        //    result.message = "PLEASE CHECK YOUR PASSWORD AGAIN !";
+                        //    break;
+                        //case "-1": //MEMBER NOT EXIST
+                        //    result.message = "LOGIN IDENTIFY IS NOT EXIST";
+                        //    break;
+                        //default:
+                        //    result.message = "LOGIN FAIL! PLEASE TRY AGAIN";
+                        //    break;
+
                     }
-                    else
+                    catch (Exception ex)
                     {
-                        result.message = "SOMETHING WENT WRONG! MISSING CODE";
+
                     }
                 }
                 else
                 {
-                    result.message = "SOMETHING WENT WRONG! PLEASE TRY AGAIN";
+                    result.message = "SOMETHING WENT WRONG! MISSING CODE";
                 }
             }
-            catch(Exception ex)
+            else
             {
-                result.message = ex.Message;
+                result.message = "SOMETHING WENT WRONG! PLEASE TRY AGAIN";
             }
             return result;
-
         }
+
+
+
+
+
+
 
         public async Task<GenericResponse> REGISTER(USER_REGISTER_DTO regis)
         {
@@ -147,10 +135,10 @@ namespace Preto13.Repository.Member
                 param.Add("@PHONE", regis.phone);
 
                 //Handle pwd
-                dataHelper.encryptPassword(regis.password, out byte[] pwdHash, out byte[] pwdSalt);
-                string hash = Convert.ToBase64String(pwdHash);
-                string salt = Convert.ToBase64String(pwdSalt);
-                param.Add("@PWD_HASH", hash);
+                string salt = dataHelper.GenerateSalt();
+                byte[] hashPwd = dataHelper.GetHash(regis.password, salt);
+                string hashPwdString = Convert.ToBase64String(hashPwd);
+                param.Add("@PWD_HASH", hashPwdString);
                 param.Add("@PWD_SALT", salt);
                 try
                 {

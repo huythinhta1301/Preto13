@@ -7,7 +7,7 @@ using Preto13.Config;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
-
+using BCryptNet = BCrypt.Net.BCrypt;
 namespace Preto13.Utils
 {
     public class DataHelper
@@ -21,6 +21,42 @@ namespace Preto13.Utils
                 pwdSalt = hmac.ComputeHash(Encoding.UTF8.GetBytes(password));
             }
         }
+        public string GenerateSalt()
+        {
+            byte[] salt;
+            new RNGCryptoServiceProvider().GetBytes(salt = new byte[16]);
+            return Convert.ToBase64String(salt);
+        }
+
+        public byte[] GetHash(string password, string salt)
+        {
+            byte[] hash = Encoding.UTF8.GetBytes(String.Concat(salt,password));
+            SHA256Managed sha256 = new SHA256Managed();
+            byte[] hashedData = sha256.ComputeHash(hash);
+            return hashedData;
+        }
+        public bool CompareHashedPassword(string password, string hashedData, string salt)
+        {
+            string data = Convert.ToBase64String(GetHash(password, salt));
+            return data.Equals(hashedData);
+        }
+        public bool VerifyPasswordHash(string password, byte[] pwdHash, byte[] pwdSalt)
+        {
+            using(var hmac = new HMACSHA512(pwdSalt)) 
+            {
+                var computeHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
+                return computeHash.SequenceEqual(pwdHash);
+            }
+        }
+        //public static string EncryptPassword(string password)
+        //{
+        //    return BCryptNet.HashPassword(password);
+        //}
+
+        //public static bool VerifyPassword(string password, string hashedPassword)
+        //{
+        //    return BCryptNet.Verify(password, hashedPassword);
+        //}
         public static bool VerifyPassword(string password, byte[] storedHash, byte[] storedSalt)
         {
             using (var hmac = new HMACSHA512(storedSalt))
